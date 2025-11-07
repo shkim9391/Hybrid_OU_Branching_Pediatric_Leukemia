@@ -1,5 +1,2 @@
-# Welcome to GitHub Desktop!
-
-This is your README. READMEs are where you can communicate what your project is and how to use it.
-
-Write your name on line 6, save it, and then head back to GitHub Desktop.
+Version 1 | Posted November 2025 | bioRxiv Preprint
+This preprint represents a computational and cohort-level extension of the hybrid OU–Branching framework introduced in the author’s manuscript currently under review at Frontiers in Oncology (“A hybrid Ornstein–Uhlenbeck–branching framework unifies microbial and pediatric tumor evolution,” Manuscript ID 1727973). The Frontiers paper focuses on experimental validation and cross-domain analogies between microbial long-term evolution experiments (LTEE) and pediatric tumor evolution, emphasizing biological interpretation. In contrast, this preprint focuses on clinical modeling, patient specific simulations, and computational methods applied to pediatric KMT2A-rearranged leukemia. No data, text, or figures are duplicated from the in-review article. All code and simulations presented here are novel and will be released upon publication.
