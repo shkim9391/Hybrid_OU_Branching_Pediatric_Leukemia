@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Figure 1 — Comparative Dynamics of OU–Branching vs. Markov/Brownian Models
-Author: [Your Name]
 Description:
     Simulates and compares Ornstein–Uhlenbeck (OU)–Branching, Brownian, 
     and Markov processes to illustrate pediatric (OU-constrained) 
