@@ -1,329 +1,402 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-KMT2A Clinical Data Analysis via Hybrid OU–Branching Model
-========================================================
+Figure 1 — Comparative Dynamics of OU–Branching vs. Brownian vs. Markov Jump Models
 
-This script processes KMT2A‑rearranged (KMT2A‑r) leukemia clinical data and
-simulates clonal evolution using a hybrid Ornstein–Uhlenbeck (OU) and
-birth–death branching model.  The goal is to generate summary statistics
-(final clone counts and final trait values) for each patient and to
-aggregate those results by relapse group and disease category.
+Simulates and compares:
+  1) Hybrid Ornstein–Uhlenbeck (OU) process with branching events (multiple lineages)
+  2) Brownian motion (neutral diffusion)
+  3) Markov jump process (discrete +/- 1 steps with Poisson-like event rate)
 
-The simulation duration for each patient is determined by multiplying
-disease‑specific median relapse times by a group‑specific factor.  Median
-relapse times are derived from the published cohort statistics【120340620773589†L790-L801】.  In
-particular, the median relapse time for acute myeloid leukemia (AML) is
-approximately the average of the reported infant AML (372 days) and
-childhood AML (205 days), resulting in ~289 days.  Median relapse times
-for B‑ALL, T‑ALL and MPAL remain 419 days.
+Outputs (written to --outdir):
+  - Fig1_OU_Branching_simulation.csv
+  - Fig1_Brownian_simulation.csv
+  - Fig1_Markov_simulation.csv
+  - Figure1_OU_vs_Brownian_vs_Markov.png
+  - (optional) Figure1_OU_vs_Brownian_vs_Markov.pdf
 
-The OU parameters (mean `mu`, reversion rate `theta`, and volatility
-`sigma`) and branching rates (`lambda_rate` and `death_rate`) are set
-heuristically for demonstration purposes.  These values can be adjusted or
-fitted to data as appropriate.
+Notes on "variance over time":
+  - A single trajectory has no across-sample variance at each timepoint.
+  - To make panel D meaningful, set --n_reps > 1 to estimate variance across replicates.
 
 Usage:
-    python3 kmt2a_clinical_data_anaysis_by_ou_branching_model.py
-
-Ensure that `kmt2a_clinical_data.xlsx` resides in the same directory as
-this script.  The script writes CSV summaries, bar charts and a plain
-text report to the current working directory.  A companion DOCX report
-is also generated using python‑docx.
+  python figure1_simulation.py
+  python figure1_simulation.py --outdir results --seed 42 --n_reps 200 --save_pdf
 """
 
-import os
-import pandas as pd
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Tuple, Any
+
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-from docx import Document
 
 
-def load_and_prepare_data(excel_path: str) -> pd.DataFrame:
-    """Load the Excel file and return a DataFrame with properly labelled columns."""
-    raw_df = pd.read_excel(excel_path, header=None)
-    header_index = None
-    for idx, row in raw_df.iterrows():
-        if 'Patient_ID' in row.values:
-            header_index = idx
-            break
-    if header_index is None:
-        raise ValueError("Header row with 'Patient_ID' not found")
-    header = raw_df.iloc[header_index].tolist()
-    data = raw_df.iloc[header_index + 1:].copy()
-    data.columns = header
-    return data
+# ==========================================================
+# DEFAULTS / FILE NAMES
+# ==========================================================
+OU_CSV = "Fig1_OU_Branching_simulation.csv"
+BM_CSV = "Fig1_Brownian_simulation.csv"
+MK_CSV = "Fig1_Markov_simulation.csv"
+FIG_PNG = "Figure1_OU_vs_Brownian_vs_Markov.png"
+FIG_PDF = "Figure1_OU_vs_Brownian_vs_Markov.pdf"
 
 
+# ==========================================================
+# CONFIG
+# ==========================================================
+@dataclass(frozen=True)
+class Params:
+    T: float = 10.0
+    dt: float = 0.01
+    theta: float = 1.0
+    sigma: float = 0.25
+    lam: float = 0.3
+    mu: float = 0.0
+    x0: float = 0.0
+    n_lineages: int = 10
+
+
+def make_time_grid(T: float, dt: float) -> np.ndarray:
+    n_steps = int(round(T / dt))
+    return np.linspace(0.0, T, n_steps + 1)
+
+
+def event_prob_poisson(rate: float, dt: float) -> float:
+    """P(event in dt) for a Poisson process with constant rate."""
+    return 1.0 - np.exp(-rate * dt)
+
+
+# ==========================================================
+# SIMULATORS
+# ==========================================================
 def simulate_ou_branching(
-    time_end: float,
-    dt: float = 0.01,
-    mu: float = 0.0,
-    theta: float = 1.0,
-    sigma: float = 0.4,
-    lambda_rate: float = 0.8,
-    death_rate: float = 0.5,
-) -> tuple:
-    """Simulate the OU process coupled to a simple birth–death process."""
-    times = np.arange(0, time_end + dt, dt)
-    trait = np.zeros_like(times)
-    for i in range(1, len(times)):
-        trait[i] = (
-            trait[i - 1]
-            + theta * (mu - trait[i - 1]) * dt
-            + sigma * np.sqrt(dt) * np.random.randn()
+    tgrid: np.ndarray,
+    theta: float,
+    mu: float,
+    sigma: float,
+    lam: float,
+    x0: float,
+    n_lineages: int,
+    rng: np.random.Generator,
+) -> pd.DataFrame:
+    """
+    Hybrid OU–Branching using Euler–Maruyama integration.
+    Each lineage evolves continuously; branching spawns a new lineage inheriting
+    the parent's current state.
+    """
+    if len(tgrid) < 2:
+        raise ValueError("tgrid must have at least two points.")
+    dt = float(tgrid[1] - tgrid[0])
+    p_branch = event_prob_poisson(lam, dt)
+
+    lineages: List[Dict[str, Any]] = [
+        {"id": 0, "x": float(x0), "hist_t": [0.0], "hist_x": [float(x0)]}
+    ]
+    next_id = 1
+
+    for k in range(1, len(tgrid)):
+        t_now = float(tgrid[k])
+        current_count = len(lineages)
+
+        # Update existing lineages only (new lineages appended after this point)
+        for i in range(current_count):
+            L = lineages[i]
+            dW = rng.normal(0.0, np.sqrt(dt))
+
+            x_old = float(L["x"])
+            x_new = x_old + theta * (mu - x_old) * dt + sigma * dW
+
+            L["x"] = x_new
+            L["hist_t"].append(t_now)
+            L["hist_x"].append(x_new)
+
+            if (len(lineages) < n_lineages) and (rng.random() < p_branch):
+                lineages.append(
+                    {"id": next_id, "x": x_new, "hist_t": [t_now], "hist_x": [x_new]}
+                )
+                next_id += 1
+
+    records: List[Tuple[float, int, float]] = []
+    for L in lineages:
+        lid = int(L["id"])
+        for tt, xx in zip(L["hist_t"], L["hist_x"]):
+            records.append((float(tt), lid, float(xx)))
+
+    return pd.DataFrame(records, columns=["t", "lineage", "x"])
+
+
+def simulate_brownian(
+    tgrid: np.ndarray,
+    sigma: float,
+    x0: float,
+    rng: np.random.Generator,
+) -> pd.DataFrame:
+    """Neutral Brownian diffusion (single trajectory)."""
+    dt = float(tgrid[1] - tgrid[0])
+    x = np.zeros_like(tgrid, dtype=float)
+    x[0] = float(x0)
+    for k in range(1, len(tgrid)):
+        dW = rng.normal(0.0, np.sqrt(dt))
+        x[k] = x[k - 1] + sigma * dW
+    return pd.DataFrame({"t": tgrid, "x": x})
+
+
+def simulate_markov_jump(
+    tgrid: np.ndarray,
+    lam: float,
+    x0: float,
+    rng: np.random.Generator,
+) -> pd.DataFrame:
+    """Discrete jump process: with prob ~ Poisson(lam), jump +/-1, else stay."""
+    dt = float(tgrid[1] - tgrid[0])
+    p_jump = event_prob_poisson(lam, dt)
+
+    x = np.zeros_like(tgrid, dtype=float)
+    x[0] = float(x0)
+    for k in range(1, len(tgrid)):
+        if rng.random() < p_jump:
+            x[k] = x[k - 1] + float(rng.choice([-1, 1]))
+        else:
+            x[k] = x[k - 1]
+    return pd.DataFrame({"t": tgrid, "x": x})
+
+
+# ==========================================================
+# VARIANCE ESTIMATION (ACROSS REPLICATES)
+# ==========================================================
+def variance_over_time_from_reps(paths: np.ndarray) -> np.ndarray:
+    """
+    paths: shape (n_reps, n_time)
+    returns: variance at each timepoint across replicates
+    """
+    if paths.ndim != 2:
+        raise ValueError("paths must be 2D: (n_reps, n_time)")
+    if paths.shape[0] <= 1:
+        return np.zeros(paths.shape[1], dtype=float)
+    return np.var(paths, axis=0, ddof=1)
+
+
+def run_replicates(
+    params: Params,
+    tgrid: np.ndarray,
+    n_reps: int,
+    seed: int,
+) -> Dict[str, pd.Series]:
+    """
+    Returns variance-over-time series for each process.
+
+    - Brownian + Markov: variance is computed across replicate paths.
+    - OU–Branching: for each replicate, compute variance across lineages at each time;
+      then average that lineage-variance curve across replicates for a stable signal.
+    """
+    if n_reps < 1:
+        raise ValueError("--n_reps must be >= 1")
+
+    base = np.random.SeedSequence(seed)
+    ss_ou, ss_bm, ss_mk = base.spawn(3)
+
+    # Spawn per-replicate seeds cleanly (no integer hacks)
+    ou_reps = ss_ou.spawn(n_reps)
+    bm_reps = ss_bm.spawn(n_reps)
+    mk_reps = ss_mk.spawn(n_reps)
+
+    n_time = len(tgrid)
+    bm_paths = np.zeros((n_reps, n_time), dtype=float)
+    mk_paths = np.zeros((n_reps, n_time), dtype=float)
+    ou_lineage_var = np.zeros((n_reps, n_time), dtype=float)
+
+    for r in range(n_reps):
+        rng_ou = np.random.default_rng(ou_reps[r])
+        rng_bm = np.random.default_rng(bm_reps[r])
+        rng_mk = np.random.default_rng(mk_reps[r])
+
+        df_ou = simulate_ou_branching(
+            tgrid=tgrid,
+            theta=params.theta,
+            mu=params.mu,
+            sigma=params.sigma,
+            lam=params.lam,
+            x0=params.x0,
+            n_lineages=params.n_lineages,
+            rng=rng_ou,
         )
-    active_count = 1
-    for t in times[:-1]:
-        new_active = 0
-        for _ in range(active_count):
-            r = np.random.rand()
-            if r < lambda_rate * dt:
-                # birth event: clone splits into two
-                new_active += 2
-            elif r < lambda_rate * dt + death_rate * dt:
-                # death event: clone dies
-                new_active += 0
-            else:
-                # survival: clone persists as one
-                new_active += 1
-        active_count = new_active
-    return active_count, trait[-1]
 
+        # Variance across lineages at each time (reindex to full tgrid)
+        ou_var_t = (
+            df_ou.groupby("t")["x"]
+            .var()
+            .reindex(tgrid, fill_value=0.0)
+            .to_numpy(dtype=float)
+        )
+        ou_lineage_var[r, :] = ou_var_t
 
-def run_simulation(data: pd.DataFrame, output_dir: str, n_reps: int = 50) -> tuple:
-    """
-    Run the hybrid OU–branching simulation for each patient, compute summary
-    statistics, aggregate by group and disease, and save outputs (CSV files
-    and bar plots) to `output_dir`.
-    """
-    # Median days to relapse by disease.  AML uses ~289 days as the
-    # average of infant and childhood AML relapse times【120340620773589†L790-L801】.
-    disease_median_days = {
-        'B-ALL': 419,
-        'T-ALL': 419,
-        'MPAL': 419,
-        'AML': 289
-    }
-    # Group multipliers for relapse timing
-    group_multiplier = {
-        'Remission': 2.0,
-        'Very early': 0.5,
-        'Very early/refractory': 0.5,
-        'Very early / Refractory': 0.5,
-        'Early': 1.0,
-        'Early/refractory': 1.0,
-        'Early / refractory': 1.0,
-        'Late': 2.0,
-        'Late / refractory': 2.0
-    }
-    summary_records = []
-    for _, row in data.iterrows():
-        disease = row['Disease']
-        group = row['Group']
-        base_days = disease_median_days.get(disease, 365)
-        time_end = (base_days / 365.0) * group_multiplier.get(group, 1.0)
+        df_bm = simulate_brownian(tgrid, params.sigma, params.x0, rng_bm)
+        bm_paths[r, :] = df_bm["x"].to_numpy(dtype=float)
 
-        # ---- replicate averaging ----
-        clone_counts, final_traits = [], []
-        for _ in range(n_reps):
-            c, t = simulate_ou_branching(time_end)
-            clone_counts.append(c)
-            final_traits.append(t)
-        clone_count = float(np.mean(clone_counts))
-        final_trait = float(np.mean(final_traits))
-        # -----------------------------
+        df_mk = simulate_markov_jump(tgrid, params.lam, params.x0, rng_mk)
+        mk_paths[r, :] = df_mk["x"].to_numpy(dtype=float)
 
-        summary_records.append({
-            'Patient_ID': row['Patient_ID'],
-            'Disease': disease,
-            'Group': group,
-            'Duration_years': time_end,
-            'Final_Clone_Count': clone_count,
-            'Final_Trait': final_trait,
-        })
-    summary_df = pd.DataFrame(summary_records)
-    group_means = (
-        summary_df.groupby('Group')
-        .agg({'Final_Clone_Count': 'mean', 'Final_Trait': 'mean'})
-        .reset_index()
+    var_ou = pd.Series(
+        np.mean(ou_lineage_var, axis=0), index=tgrid, name="OU–Branching (across lineages)"
     )
-    disease_means = (
-        summary_df.groupby('Disease')
-        .agg({'Final_Clone_Count': 'mean', 'Final_Trait': 'mean'})
-        .reset_index()
+    var_bm = pd.Series(
+        variance_over_time_from_reps(bm_paths), index=tgrid, name="Brownian (across reps)"
     )
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    # Save CSV outputs
-    summary_df.to_csv(os.path.join(output_dir, 'simulation_summary.csv'), index=False)
-    group_means.to_csv(os.path.join(output_dir, 'group_means.csv'), index=False)
-    disease_means.to_csv(os.path.join(output_dir, 'disease_means.csv'), index=False)
-    # Compute mean and SEM (std / sqrt(n)) for each aggregation
-    group_stats = (
-    summary_df.groupby('Group')
-    .agg(Final_Clone_Count_Mean=('Final_Clone_Count', 'mean'),
-         Final_Clone_Count_SEM =('Final_Clone_Count', 'sem'),
-         Final_Trait_Mean      =('Final_Trait', 'mean'),
-         Final_Trait_SEM       =('Final_Trait', 'sem'))
-    .reset_index()
-    .fillna(0)  # if a category has n=1, SEM becomes NaN; set to 0
+    var_mk = pd.Series(
+        variance_over_time_from_reps(mk_paths), index=tgrid, name="Markov (across reps)"
     )
 
-    disease_stats = (
-    summary_df.groupby('Disease')
-    .agg(Final_Clone_Count_Mean=('Final_Clone_Count', 'mean'),
-         Final_Clone_Count_SEM =('Final_Clone_Count', 'sem'),
-         Final_Trait_Mean      =('Final_Trait', 'mean'),
-         Final_Trait_SEM       =('Final_Trait', 'sem'))
-    .reset_index()
-    .fillna(0)
-    )
-   
-    # Generate bar plots
-    # === FIGURE 2A ===
-    plt.figure()
-    plt.bar(group_stats['Group'], group_stats['Final_Clone_Count_Mean'],
-          yerr=group_stats['Final_Clone_Count_SEM'], capsize=4, ecolor='black')
-    plt.title('A. Average Final Clone Count per Group')
-    plt.xlabel('Group'); plt.ylabel('Average Final Clone Count (mean ± SEM)')
-    plt.xticks(rotation=45, ha='right'); plt.ylim(bottom=0)
+    return {"ou": var_ou, "brownian": var_bm, "markov": var_mk}
+
+
+# ==========================================================
+# PLOTTING
+# ==========================================================
+def plot_figure(
+    df_ou: pd.DataFrame,
+    df_brown: pd.DataFrame,
+    df_markov: pd.DataFrame,
+    var_ou: pd.Series,
+    var_brown: pd.Series,
+    var_markov: pd.Series,
+    mu: float,
+    out_png: Path,
+    dpi: int = 300,
+    save_pdf: bool = False,
+    out_pdf: Path | None = None,
+    show: bool = True,
+) -> None:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8), dpi=dpi)
+
+    # (A) OU–Branching trajectories
+    for _, sub in df_ou.groupby("lineage"):
+        axes[0, 0].plot(sub["t"], sub["x"], alpha=0.9, linewidth=1.0)
+    axes[0, 0].axhline(mu, linestyle="--", linewidth=1.0)
+    axes[0, 0].set_title("A. OU–Branching Trajectories")
+    axes[0, 0].set_xlabel("Time")
+    axes[0, 0].set_ylabel("Trait X(t)")
+
+    # (B) Brownian motion
+    axes[0, 1].plot(df_brown["t"], df_brown["x"], linewidth=1.2)
+    axes[0, 1].set_title("B. Brownian Motion (Neutral Drift)")
+    axes[0, 1].set_xlabel("Time")
+    axes[0, 1].set_ylabel("Trait X(t)")
+
+    # (C) Markov jumps
+    axes[1, 0].plot(df_markov["t"], df_markov["x"], drawstyle="steps-post", linewidth=1.2)
+    axes[1, 0].set_title("C. Markov Jump Process")
+    axes[1, 0].set_xlabel("Time")
+    axes[1, 0].set_ylabel("Discrete State")
+
+    # (D) Variance comparison
+    axes[1, 1].plot(var_ou.index, var_ou.values, label=str(var_ou.name), linewidth=1.5)
+    axes[1, 1].plot(var_brown.index, var_brown.values, label=str(var_brown.name), linewidth=1.5)
+    axes[1, 1].plot(var_markov.index, var_markov.values, label=str(var_markov.name), linewidth=1.5)
+    axes[1, 1].set_title("D. Variance over Time")
+    axes[1, 1].set_xlabel("Time")
+    axes[1, 1].set_ylabel("Variance")
+    axes[1, 1].legend(loc="upper left", frameon=True, edgecolor="gray", framealpha=1, fontsize=8)
+
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fig2a_avg_clone_per_group.png'), dpi=300)
-    plt.close()
+    fig.savefig(out_png, bbox_inches="tight", dpi=dpi)
 
-    # === FIGURE 2B ===
-    plt.figure()
-    plt.bar(disease_stats['Disease'], disease_stats['Final_Clone_Count_Mean'],
-          yerr=disease_stats['Final_Clone_Count_SEM'], capsize=4, ecolor='black')
-    plt.title('B. Average Final Clone Count per Disease')
-    plt.xlabel('Disease'); plt.ylabel('Average Final Clone Count (mean ± SEM)')
-    plt.xticks(rotation=45, ha='right'); plt.ylim(bottom=0)
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fig2b_avg_clone_per_disease.png'), dpi=300)
-    plt.close()
+    if save_pdf:
+        if out_pdf is None:
+            out_pdf = out_png.with_suffix(".pdf")
+        fig.savefig(out_pdf, bbox_inches="tight")
 
-     # === FIGURE 2C ===
-    plt.figure()
-    plt.bar(group_stats['Group'], group_stats['Final_Trait_Mean'],
-          yerr=group_stats['Final_Trait_SEM'], capsize=4, ecolor='black')
-    plt.title('C. Average Final Trait per Group')
-    plt.xlabel('Group'); plt.ylabel('Average Final Trait (mean ± SEM)')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fig2c_avg_trait_per_group.png'), dpi=300)
-    plt.close()
+    if show:
+        plt.show()
 
-    # === FIGURE 2D ===
-    plt.figure()
-    plt.bar(disease_stats['Disease'], disease_stats['Final_Trait_Mean'],
-          yerr=disease_stats['Final_Trait_SEM'], capsize=4, ecolor='black')
-    plt.title('D. Average Final Trait per Disease')
-    plt.xlabel('Disease'); plt.ylabel('Average Final Trait (mean ± SEM)')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'fig2d_avg_trait_per_disease.png'), dpi=300)
-    plt.close()
-
-    # === COMPOSITE FIGURE: Figure 2 (A–D) ===
-    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-    plt.subplots_adjust(wspace=0.4, hspace=0.4)
-
-    axes[0, 0].bar(group_stats['Group'], group_stats['Final_Clone_Count_Mean'],
-                   yerr=group_stats['Final_Clone_Count_SEM'], capsize=4, ecolor='black')
-    axes[0, 0].set_title('A. Average Final Clone Count per Group')
-    axes[0, 0].set_xlabel('Group'); axes[0, 0].set_ylabel('Average Final Clone Count (mean ± SEM)')
-    axes[0, 0].tick_params(axis='x', rotation=45); axes[0, 0].set_ylim(bottom=0)
-
-    axes[0, 1].bar(disease_stats['Disease'], disease_stats['Final_Clone_Count_Mean'],
-                   yerr=disease_stats['Final_Clone_Count_SEM'], capsize=4, ecolor='black')
-    axes[0, 1].set_title('B. Average Final Clone Count per Disease')
-    axes[0, 1].set_xlabel('Disease'); axes[0, 1].set_ylabel('Average Final Clone Count (mean ± SEM)')
-    axes[0, 1].tick_params(axis='x', rotation=45); axes[0, 1].set_ylim(bottom=0)
-
-    axes[1, 0].bar(group_stats['Group'], group_stats['Final_Trait_Mean'],
-                   yerr=group_stats['Final_Trait_SEM'], capsize=4, ecolor='black')
-    axes[1, 0].set_title('C. Average Final Trait per Group')
-    axes[1, 0].set_xlabel('Group'); axes[1, 0].set_ylabel('Average Final Trait (mean ± SEM)')
-    axes[1, 0].tick_params(axis='x', rotation=45)
-
-    axes[1, 1].bar(disease_stats['Disease'], disease_stats['Final_Trait_Mean'],
-                   yerr=disease_stats['Final_Trait_SEM'], capsize=4, ecolor='black')
-    axes[1, 1].set_title('D. Average Final Trait per Disease')
-    axes[1, 1].set_xlabel('Disease'); axes[1, 1].set_ylabel('Average Final Trait (mean ± SEM)')
-    axes[1, 1].tick_params(axis='x', rotation=45)
-
-    fig.tight_layout()
-    fig.savefig(os.path.join(output_dir, 'fig2_composite_all_panels.png'), dpi=300)
     plt.close(fig)
 
-    # >>> move the return to the very end <<<
-    return summary_df, group_means, disease_means
 
-def create_report(
-    group_means: pd.DataFrame,
-    disease_means: pd.DataFrame,
-    output_dir: str
-) -> str:
-    """Write a plain text report summarizing methods, results and conclusions."""
-    group_summary = group_means.to_string(index=False)
-    disease_summary = disease_means.to_string(index=False)
-    lines = [
-        'Hybrid OU–Branching Simulation Report',
-        '',
-        'Methods:',
-        'We processed KMT2A-r patient data by extracting clinical metadata (Patient_ID, Disease, Group).',
-        'We assigned each patient a simulation duration based on disease-specific median relapse times (419 days for ALL variants and ~289 days for AML)',
-        'converted to years and adjusted by group-specific multipliers (e.g. 0.5 for very early relapse, 1.0 for early, 2.0 for late or remission).',
-        'Trait dynamics were simulated using an Ornstein–Uhlenbeck process (mu=0, theta=1, sigma=0.4) coupled to a birth–death branching process (birth rate 0.8, death rate 0.5).',
-        'For each patient, we recorded the final number of clones and the final trait value.',
-        '',
-        'Results:',
-        'Average final clone counts and trait values were computed for each relapse group and disease category.',
-        'Group-level summary:',
-        group_summary,
-        '',
-        'Disease-level summary:',
-        disease_summary,
-        '',
-        'Conclusions:',
-        'The simulation suggests that patients with longer assumed relapse intervals (late or remission categories) tend to have more surviving clones,',
-        'while very early or early refractory cases have fewer surviving clones. MPAL cases exhibit the highest average clone counts, whereas AML cases have fewer.',
-        'These patterns should be interpreted cautiously, as the simulations rely on aggregated relapse durations and heuristic parameters.',
-        'Nevertheless, the framework illustrates how relapse timing might influence clonal dynamics.',
-    ]
-    report_txt = os.path.join(output_dir, 'simulation_report.txt')
-    with open(report_txt, 'w') as f:
-        f.write('\n'.join(lines))
-    return report_txt
-
-
-def convert_to_docx(text_file: str, output_dir: str) -> str:
-    """Convert a plain text report to a .docx file using python-docx."""
-    doc = Document()
-    with open(text_file, 'r') as f:
-        for line in f:
-            doc.add_paragraph(line.strip())
-    docx_path = os.path.join(
-        output_dir,
-        os.path.splitext(os.path.basename(text_file))[0] + '.docx'
+# ==========================================================
+# CLI / MAIN
+# ==========================================================
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Simulate OU–Branching vs Brownian vs Markov for Figure 1."
     )
-    doc.save(docx_path)
-    return docx_path
+    p.add_argument("--outdir", type=str, default=".", help="Output directory (default: current).")
+    p.add_argument("--seed", type=int, default=42, help="Random seed (default: 42).")
+    p.add_argument("--n_reps", type=int, default=1, help="Replicates for variance estimation (default: 1).")
+    p.add_argument("--dpi", type=int, default=300, help="Figure DPI (default: 300).")
+    p.add_argument("--save_pdf", action="store_true", help="Also save a PDF version of the figure.")
+    p.add_argument("--no_show", action="store_true", help="Do not display the figure window.")
+    return p.parse_args()
 
 
-def main():
-    # Define input and output paths relative to the script location
-    excel_path = 'kmt2a_clinical_data.xlsx'
-    output_dir = '.'
-    if not os.path.isfile(excel_path):
-        raise FileNotFoundError(
-            f"Missing input file: {excel_path}. Ensure the Excel file is in the current directory."
-        )
-    data = load_and_prepare_data(excel_path)
-    summary_df, group_means, disease_means = run_simulation(data, output_dir)
-    report_txt = create_report(group_means, disease_means, output_dir)
-    report_docx = convert_to_docx(report_txt, output_dir)
-    print(f'Report generated at: {report_docx}')
+def main() -> None:
+    args = parse_args()
+    outdir = Path(args.outdir).expanduser().resolve()
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    params = Params()
+    tgrid = make_time_grid(params.T, params.dt)
+
+    # Independent RNG streams for the primary trajectories plotted in panels A–C
+    ss = np.random.SeedSequence(args.seed)
+    ss_ou, ss_bm, ss_mk = ss.spawn(3)
+    rng_ou = np.random.default_rng(ss_ou)
+    rng_bm = np.random.default_rng(ss_bm)
+    rng_mk = np.random.default_rng(ss_mk)
+
+    df_ou = simulate_ou_branching(
+        tgrid=tgrid,
+        theta=params.theta,
+        mu=params.mu,
+        sigma=params.sigma,
+        lam=params.lam,
+        x0=params.x0,
+        n_lineages=params.n_lineages,
+        rng=rng_ou,
+    )
+    df_brown = simulate_brownian(tgrid, params.sigma, params.x0, rng_bm)
+    df_markov = simulate_markov_jump(tgrid, params.lam, params.x0, rng_mk)
+
+    # Save trajectory data
+    df_ou.to_csv(outdir / OU_CSV, index=False)
+    df_brown.to_csv(outdir / BM_CSV, index=False)
+    df_markov.to_csv(outdir / MK_CSV, index=False)
+
+    # Variance series (meaningful if n_reps > 1)
+    var_series = run_replicates(params, tgrid, n_reps=int(args.n_reps), seed=int(args.seed))
+    var_ou = var_series["ou"]
+    var_brown = var_series["brownian"]
+    var_markov = var_series["markov"]
+
+    # Plot + save figure
+    out_png = outdir / FIG_PNG
+    out_pdf = outdir / FIG_PDF
+    plot_figure(
+        df_ou=df_ou,
+        df_brown=df_brown,
+        df_markov=df_markov,
+        var_ou=var_ou,
+        var_brown=var_brown,
+        var_markov=var_markov,
+        mu=params.mu,
+        out_png=out_png,
+        dpi=int(args.dpi),
+        save_pdf=bool(args.save_pdf),
+        out_pdf=out_pdf if args.save_pdf else None,
+        show=(not args.no_show),
+    )
+
+    print("Simulation complete! Files saved to:", outdir)
+    print("-", FIG_PNG)
+    if args.save_pdf:
+        print("-", FIG_PDF)
+    print("-", OU_CSV)
+    print("-", BM_CSV)
+    print("-", MK_CSV)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
