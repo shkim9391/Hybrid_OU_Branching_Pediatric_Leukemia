@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov  1 20:35:22 2025
-
-@author: seung-hwan.kim
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
 Figure 3 – Patient-level OU–Branching simulation (P15-style)
 Generates a 4-panel composite figure:
   A. Average trait vs time
