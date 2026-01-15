@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Figure 4: P15 Hybrid OU–Branching Results (Composite A + B)
 Clone Fractions and Mutation VAFs plotted together.
