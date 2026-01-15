@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Figure 1 — Comparative Dynamics of OU–Branching vs. Markov/Brownian Models
 Description:
