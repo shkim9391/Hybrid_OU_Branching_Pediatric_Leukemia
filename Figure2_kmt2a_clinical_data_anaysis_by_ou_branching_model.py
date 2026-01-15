@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 KMT2A Clinical Data Analysis via Hybrid OU–Branching Model
 ========================================================
