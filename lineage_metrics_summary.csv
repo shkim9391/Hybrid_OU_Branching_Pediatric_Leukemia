@@ -1,0 +1,53 @@
+final_clones,total_clones,branch_events,max_depth,Patient_ID,Disease,Group
+14,49,48,13,P15,B-ALL,Remission
+6,11,10,4,P16,B-ALL,Remission
+0,1,0,0,P19,B-ALL,Remission
+1,1,0,0,P2,B-ALL,Remission
+0,1,0,0,P26,B-ALL,Remission
+0,1,0,0,P29,B-ALL,Remission
+2,5,4,2,P1,MPAL,Remission
+1,1,0,0,P123,B-ALL,Very early
+0,1,0,0,P126,B-ALL,Very early
+1,1,0,0,P127,B-ALL,Very early
+0,1,0,0,P128,B-ALL,Very early
+1,1,0,0,P129,B-ALL,Very early
+2,3,2,1,P11,B-ALL,Very early
+1,3,2,1,P12,B-ALL,Very early
+2,3,2,1,P89,B-ALL,Very early
+1,1,0,0,P28,B-ALL,Very early/refractory
+1,1,0,0,P135,B-ALL,Very early/refractory
+1,1,0,0,P136,B-ALL,Very early/refractory
+1,1,0,0,P22,B-ALL,Early
+1,3,2,1,P56,B-ALL,Early
+1,1,0,0,P121,B-ALL,Early
+0,1,0,0,P122,B-ALL,Early
+1,1,0,0,P124,B-ALL,Early
+0,1,0,0,P125,B-ALL,Early
+4,7,6,3,P130,B-ALL,Early
+1,1,0,0,P133,B-ALL,Early
+0,1,0,0,P3,B-ALL,Early
+0,1,0,0,P47,B-ALL,Early
+0,1,0,0,P17,B-ALL,Early
+1,1,0,0,P57,B-ALL,Early
+0,1,0,0,P58,T-ALL,Early
+2,3,2,1,P69,B-ALL,Early
+2,9,8,3,P137,B-ALL,Early
+1,1,0,0,P138,B-ALL,Early
+1,3,2,1,P108,AML,Remission
+2,3,2,1,P27,AML,Remission
+0,1,0,0,P7,AML,Remission
+1,3,2,1,P8,AML,Remission
+0,1,0,0,P77,AML,Early
+3,5,4,2,P70,AML,Early
+4,9,8,3,P110,AML,Early
+1,1,0,0,P23,AML,Early
+1,1,0,0,P63,AML,Early
+4,7,6,3,P68,AML,Early/refractory
+4,7,6,3,P83,AML,Late
+1,1,0,0,P100,AML,Late
+0,1,0,0,P95,AML,Late
+2,5,4,2,P99,AML,Late
+1,3,2,1,P24,AML,Late
+1,3,2,1,P30,AML,Late
+6,13,12,5,P32,AML,Late
+0,1,0,0,P59,AML,Late
