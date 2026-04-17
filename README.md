@@ -74,23 +74,25 @@ The current repository includes the following main files.
 - `Supplementary_Tables.xlsx`  
   Supplementary manuscript tables packaged for submission and reference.
 
-## Suggested repository layout
-
-A simple organization for public release would be:
+## Repository structure
 
 ```text
 repo_root/
-  Figure1_OU_vs_Brownian_vs_Markov.py
-  Figure2_kmt2a_clinical_data_analysis_by_ou_branching.py
-  Figure3_Combined_P15.py
-  Figure4_P15_OU_Branching_Combined.py
-  kmt2a_lineage_analysis.py
-  kmt2a_phase_plane_lineage_plots.py
-  kmt2a_clinical_data.xlsx
-  P15_OU_clone_fractions.csv
-  P15_OU_mutation_VAFs.csv
-  lineage_metrics_summary.csv
-  Supplementary_Tables.xlsx
+  data/
+    P15_OU_clone_fractions.csv
+    P15_OU_mutation_VAFs.csv
+    Supplementary_Tables.xlsx
+    kmt2a_clinical_data.xlsx
+    lineage_metrics_summary.csv
+
+  scripts/
+    Figure1_OU_vs_Brownian_vs_Markov.py
+    Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py
+    Figure3_Combined_P15.py
+    Figure4_P15_OU_Branching_Combined.py
+    kmt2a_lineage_analysis.py
+    kmt2a_phase_plane_lineage_plots.py
+
   README.md
 
 ## Scientific scope
