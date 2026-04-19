@@ -342,3 +342,8 @@ Seung-Hwan Kim. Computational and cohort-level extension of hybrid OU-Branching 
 Contact
 
 Author: Seung-Hwan Kim
+
+DOI
+10.5281/zenodo.17555292
+
+[![DOI](https://zenodo.org/badge/494576446.svg)](https://doi.org/10.5281/zenodo.17555291)
