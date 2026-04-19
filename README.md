@@ -337,7 +337,7 @@ Citation
 
 If you use this repository, please cite the associated preprint.
 
-Seung-Hwan Kim. Computational and cohort-level extension of hybrid OU-Branching modeling in pediatric KMT2A-rearranged leukemia. bioRxiv preprint, Version 1, November 2025.
+Seung-Hwan Kim. Computational and cohort-level extension of hybrid OU-Branching modeling in pediatric KMT2A-rearranged leukemia. bioRxiv preprint, Version 1, November 2025. doi: https://doi.org/10.1101/2025.11.07.686044
 
 Contact
 
