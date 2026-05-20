@@ -1,321 +1,294 @@
 # KMT2A_OU_Branching_Leukemia
 
-Code, processed cohort tables, and reproducible figure-generation workflows for cohort-level and simulation-based analysis of hybrid Ornstein-Uhlenbeck (OU) / OU-Branching dynamics in pediatric KMT2A-rearranged leukemia.
+Code, processed cohort tables, supplementary tables, and reproducible figure-generation workflows for cohort-level and simulation-based analysis of hybrid Ornstein--Uhlenbeck (OU) and OU--Branching dynamics in pediatric KMT2A-rearranged leukemia.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17555292.svg)](https://doi.org/10.5281/zenodo.17555292)
 
 ## Overview
 
-This repository accompanies a bioRxiv preprint presenting a computational and cohort-level extension of the hybrid OU-Branching framework for pediatric leukemia. The project focuses on clinical modeling, patient-specific simulations, lineage-aware summaries, and comparison of alternative stochastic baselines, including OU, Brownian, and Markov-style formulations.
+This repository supports the revised iScience manuscript:
 
-The repository includes:
+**Modeling constrained tumor evolution through hybrid Ornstein--Uhlenbeck and branching dynamics**  
+Manuscript number: **ISCIENCE-D-25-20135**
 
-- figure-generation scripts for the main manuscript figures,
-- processed clinical and lineage-related input tables,
-- mutation and clone-fraction summaries used in phase-space and branching analyses,
-- supplementary tables packaged for manuscript submission.
+The project evaluates a hybrid OU--Branching framework for pediatric leukemia evolution. The model links continuous mean-reverting tumor-state dynamics with stochastic lineage birth, death, and extinction. The revised analysis treats Brownian motion as the zero-attraction limiting case of OU dynamics and uses case-level likelihood-based model comparison to evaluate whether patient trajectories are better described by Brownian diffusion, OU diffusion, Markov-emission dynamics, branching-only directional drift, or an OU--Branching jump-diffusion proxy.
 
 This repository is organized for manuscript reproducibility rather than as a general-purpose software package.
 
-## Preprint context
+## Main revision features
 
-**Version 1 | Posted November 2025 | bioRxiv Preprint**
+The revised repository and supplementary files support the following manuscript additions:
 
-This preprint represents a computational and cohort-level extension of the hybrid OU-Branching framework introduced in the author's manuscript under review at *Frontiers in Oncology* ("A hybrid Ornstein-Uhlenbeck-branching framework unifies microbial and pediatric tumor evolution", manuscript ID 1727973).
+- Explicit Brownian--OU relationship: Brownian motion is treated as the zero-attraction OU limit.
+- Explicit birth, death, and extinction definitions for the OU--Branching framework.
+- Case-level likelihood-based model comparison using longitudinal targeted-sequencing VAF trajectories.
+- New Figure 5: patient-by-model heatmap of delta-AICc values.
+- New Supplementary Table S8: case-level model-comparison results.
+- Improved code-to-output mapping and supplementary table annotation.
 
-The *Frontiers in Oncology* paper emphasizes experimental validation and cross-domain analogies between microbial long-term evolution experiments and pediatric tumor evolution, with primary emphasis on biological interpretation. In contrast, this repository and associated preprint focus on:
+## Scientific scope
 
-- clinical modeling,
-- patient-specific simulations,
-- lineage-aware summaries,
-- phase-plane visualization,
-- stochastic baseline comparison in pediatric KMT2A-rearranged leukemia.
+The repository studies pediatric KMT2A-rearranged leukemia using stochastic evolutionary models that represent disease progression as a combination of constrained tumor-state dynamics and lineage turnover.
 
-No text, figures, or data are intended to duplicate the separate in-review manuscript; this repository is meant to support the distinct computational preprint and its reproducible analyses.
+Conceptually:
 
-## Repository contents
+- **Brownian diffusion** provides a null continuous-drift model without stabilizing attraction.
+- **OU diffusion** models continuous mean-reverting dynamics around latent disease-state equilibria.
+- **Markov-emission models** provide a memoryless state-switching comparator.
+- **Branching-only directional-drift models** capture directional change without OU stabilization.
+- **OU--Branching jump-diffusion models** provide a tractable proxy for coupled mean reversion and abrupt lineage-like reconfiguration in longitudinal VAF trajectories.
 
-The current repository includes the following main files.
+The goal is not to claim that one model universally explains all pediatric leukemia cases. Instead, the workflow assigns model support at the individual-patient level and then interprets cohort-level relapse and subtype patterns alongside those case-level results.
 
-### Main figure scripts
+## Data source and use
 
-- `Figure1_OU_vs_Brownian_vs_Markov.py`  
-  Generates Figure 1, comparing OU-based dynamics against Brownian and Markov-style baselines. This script is intended to illustrate the conceptual and empirical differences between constrained mean-reverting dynamics and alternative stochastic formulations.
+The empirical analysis uses de-identified clinical metadata and published longitudinal targeted-sequencing variant-allele-frequency (VAF) measurements from:
 
-- `Figure2_kmt2a_clinical_data_analysis_by_ou_branching.py`  
-  Generates Figure 2 from the KMT2A clinical dataset using the OU-Branching framework. This script likely performs patient-level or cohort-level modeling on the processed clinical table and summarizes the resulting evolutionary patterns.
+Ahlgren et al. *Nature Communications* 16, 8964.
 
-- `Figure3_Combined_P15.py`  
-  Generates Figure 3 using the P15 processed lineage / clone summary inputs. This script appears to integrate multiple data summaries into a combined patient-level visualization.
-
-- `Figure4_P15_OU_Branching_Combined.py`  
-  Generates Figure 4, combining P15-specific outputs with the OU-Branching analysis pipeline. This figure likely synthesizes lineage, clone-fraction, and mutation-VAF information into a joint evolutionary interpretation.
-
-### Additional analysis scripts
-
-- `kmt2a_lineage_analysis.py`  
-  Performs lineage-focused analysis from processed inputs. Typical uses may include summarizing clone transitions, computing lineage-derived metrics, or generating intermediate outputs used by later figure scripts.
-
-- `kmt2a_phase_plane_lineage_plots.py`  
-  Produces lineage-aware phase-plane plots from processed patient or clone-level summaries. These plots are useful for visualizing trajectory structure under the fitted or summarized evolutionary model.
-
-### Input and processed data files
-
-- `kmt2a_clinical_data.xlsx`  
-  Main processed clinical dataset used for cohort-level analysis.
-
-- `P15_OU_clone_fractions.csv`  
-  Clone-fraction summaries for patient/sample P15 used in branching and lineage analyses.
-
-- `P15_OU_mutation_VAFs.csv`  
-  Variant allele frequency (VAF) summaries for patient/sample P15 used in phase-plane and OU-Branching analyses.
-
-- `lineage_metrics_summary.csv`  
-  Summary table of lineage-level metrics used for downstream plotting, interpretation, or manuscript reporting.
-
-- `Supplementary_Tables.xlsx`  
-  Supplementary manuscript tables packaged for submission and reference.
+No raw sequencing reads, single-cell profiles, independently generated clinical specimens, controlled-access genomic data, or identifiable patient information are used in this repository.
 
 ## Repository structure
+
+Recommended repository layout:
 
 ```text
 repo_root/
   data/
-    P15_OU_clone_fractions.csv
-    P15_OU_mutation_VAFs.csv
-    Supplementary_Tables.xlsx
-    kmt2a_clinical_data.xlsx
-    lineage_metrics_summary.csv
+    raw/
+      Ahlgren_2025_Supplementary_Data_1-18.xlsx
+    processed/
+      kmt2a_clinical_data.xlsx
+      P15_OU_clone_fractions.csv
+      P15_OU_mutation_VAFs.csv
+      lineage_metrics_summary.csv
+      Supplementary_Tables.xlsx
 
   scripts/
     Figure1_OU_vs_Brownian_vs_Markov.py
     Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py
     Figure3_Combined_P15.py
     Figure4_P15_OU_Branching_Combined.py
+    run_case_level_aicc_model_comparison.py
     kmt2a_lineage_analysis.py
     kmt2a_phase_plane_lineage_plots.py
 
+  results/
+    figures/
+      Figure1_OU_vs_Brownian_vs_Markov.png
+      Figure2_kmt2a_clinical_summary.png
+      Figure3_Combined_P15.png
+      Figure4_P15_OU_Branching_Combined.png
+      Figure5_case_level_model_comparison_AICc.png
+      Figure5_case_level_model_comparison_AICc.pdf
+    tables/
+      iScience_case_level_AICc_model_comparison.csv
+      iScience_case_level_model_fits_long.csv
+      iScience_case_level_VAF_timeseries_collapsed.csv
+      iScience_case_level_AICc_model_comparison.xlsx
+
+  requirements.txt
+  environment.yml
   README.md
+```
 
-## Scientific scope
+The exact repository organization may differ slightly depending on manuscript-version-specific file placement. The script-to-output map below defines the intended reproducibility workflow.
 
-This project studies pediatric KMT2A-rearranged leukemia using stochastic evolutionary models that represent disease progression as a combination of constrained drift and branching structure.
+## Script-to-output map
 
-Conceptually:
-	•	OU dynamics model continuous, mean-reverting evolution around latent disease states.
-	•	Brownian models provide a diffusion-only comparison without stabilizing pull.
-	•	Markov-style models provide a discrete-state comparator.
-	•	OU-Branching models extend the OU framework to allow divergence across clone or lineage structure.
+| Script | Main output | Manuscript item |
+|---|---|---|
+| `Figure1_OU_vs_Brownian_vs_Markov.py` | OU, Brownian, and Markov benchmark trajectories and variance profiles | Figure 1 |
+| `Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py` | Cohort-level relapse and disease-subtype summaries | Figure 2 |
+| `Figure3_Combined_P15.py` | P15 trait, clone-count, phase-plane, and lineage panels | Figure 3 |
+| `Figure4_P15_OU_Branching_Combined.py` | P15 clone-fraction and VAF-like trajectory synthesis | Figure 4 |
+| `run_case_level_aicc_model_comparison.py` | Case-level AICc workbook/table and delta-AICc heatmap | Figure 5; Supplementary Table S8 |
+| `kmt2a_lineage_analysis.py` | Lineage-derived metrics | Supplementary lineage metrics |
+| `kmt2a_phase_plane_lineage_plots.py` | Lineage-aware phase-plane plots | Supporting analyses |
 
-The overall goal is not only predictive modeling, but also biologically interpretable characterization of leukemia progression, lineage diversification, and patient-specific evolutionary constraints.
+## Supplementary tables workbook
 
-File descriptions in more detail
+The workbook `Supplementary_Tables.xlsx` contains Supplementary Tables S1--S8. The current workbook includes the following sheets:
 
-Figure1_OU_vs_Brownian_vs_Markov.py
+| Supplementary table | Sheet name | Contents |
+|---|---|---|
+| Supplementary Table S1 | `Sim_Params` | Simulation parameters for Figure 1 model benchmarking, including OU--Branching, Brownian, and Markov settings. |
+| Supplementary Table S2 | `Clinical_Data` | De-identified clinical metadata from the Ahlgren et al. cohort, including patient ID, disease subtype, relapse group, fusion annotation, and karyotype fields. |
+| Supplementary Table S3 | `Group_Summary` | Group-level summaries of simulated final clone count and terminal trait values by relapse group. |
+| Supplementary Table S4 | `Disease_Summary` | Disease-level summaries of simulated final clone count and terminal trait values by disease subtype. |
+| Supplementary Table S5 | `Simulation_Summary` | Patient-level simulation summaries used for Figure 2, including duration, final clone count, and final trait. |
+| Supplementary Table S6 | `Patient_Outputs` | Column definitions and patient-level simulation output annotations. |
+| Supplementary Table S7 | `Lineage_Metrics_Summary` | Lineage-level metrics, including final clones, total clones, branch events, maximum depth, patient ID, disease, and relapse group. |
+| Supplementary Table S8 | `Case_Level_Model_Comparison` | Case-level likelihood-based model-comparison results for evaluable patients, including time points, disease, group, best model, AICc, Akaike weight, and delta-AICc values for each candidate model. |
 
-This script compares competing stochastic views of disease evolution. It is likely intended to:
-	•	simulate or summarize dynamics under OU, Brownian, and Markov models,
-	•	show how constrained mean reversion differs from unconstrained diffusion,
-	•	motivate why OU-based structure may better capture clinically meaningful leukemia dynamics.
+### Supplementary Table S8 summary
 
-Typical output:
-	•	comparison panels,
-	•	conceptual summary plots,
-	•	benchmark-style trajectory visualizations.
+`Case_Level_Model_Comparison` contains the case-level analysis supporting Figure 5. Patients were included when they had at least eight distinct longitudinal targeted-sequencing time points. For each evaluable patient, corrected VAF values were collapsed by patient and sampling day, logit-transformed, and fitted to five candidate dynamical models:
 
-Figure2_kmt2a_clinical_data_analysis_by_ou_branching.py
+1. Brownian neutral diffusion
+2. Branching-only directional drift
+3. OU diffusion
+4. Markov-emission benchmark
+5. OU--Branching jump-diffusion proxy
 
-This script performs the main clinical data analysis using the KMT2A cohort table. It likely:
-	•	reads the processed clinical spreadsheet,
-	•	constructs patient/timepoint-level inputs,
-	•	applies OU-Branching summaries or model-derived calculations,
-	•	exports the main figure for cohort-level interpretation.
+The key reported fields include:
 
-Typical output:
-	•	patient-level or cohort-level trend summaries,
-	•	grouped model-derived statistics,
-	•	manuscript-ready Figure 2 panels.
+- `Patient`
+- `n_timepoints`
+- `min_day`
+- `max_day`
+- `n_variants_median`
+- `mean_vaf_diagnosis`
+- `mean_vaf_final`
+- `Disease`
+- `Group`
+- `FusionGeneatDiagnosis`
+- `Infant/Child`
+- `Survival`
+- `best_model`
+- `best_AICc`
+- `best_weight`
+- `delta_AICc_Brownian`
+- `delta_AICc_Branching-only drift`
+- `delta_AICc_OU`
+- `delta_AICc_Markov-emission`
+- `delta_AICc_OU-Branching jump`
 
-Figure3_Combined_P15.py
+In the revised analysis, 16 patients were evaluable for case-level AICc comparison. OU diffusion was preferred in six cases, the OU--Branching jump-diffusion proxy in six cases, and Brownian diffusion in four cases. Neither the Markov-emission benchmark nor the branching-only directional-drift proxy was selected as the best-supported model in any evaluable case.
 
-This script focuses on a combined analysis of patient/sample P15. It likely integrates:
-	•	clone fractions,
-	•	mutation VAF summaries,
-	•	lineage-derived metrics,
-	•	OU-based or OU-Branching visualization layers.
+## Typical workflow
 
-Typical output:
-	•	combined patient-specific panels,
-	•	intermediate-to-late disease trajectory summaries,
-	•	integrated visual representation of P15 evolution.
+From the repository root, run the scripts in the following order when regenerating the manuscript figures and tables:
 
-Figure4_P15_OU_Branching_Combined.py
+```bash
+# Optional lineage-derived intermediate analyses
+python scripts/kmt2a_lineage_analysis.py
+python scripts/kmt2a_phase_plane_lineage_plots.py
 
-This script appears to generate the final P15-specific OU-Branching synthesis figure. It likely combines the major processed P15 inputs into a single summary display.
+# Main manuscript figures
+python scripts/Figure1_OU_vs_Brownian_vs_Markov.py
+python scripts/Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py
+python scripts/Figure3_Combined_P15.py
+python scripts/Figure4_P15_OU_Branching_Combined.py
 
-Typical output:
-	•	multi-panel patient-level figure,
-	•	joint clone/VAF/evolution overlays,
-	•	final manuscript-ready composite visualization.
+# Case-level model comparison for Figure 5 and Supplementary Table S8
+python scripts/run_case_level_aicc_model_comparison.py
+```
 
-kmt2a_lineage_analysis.py
+The Figure 5 workflow expects access to the Ahlgren et al. supplementary workbook or an equivalent processed VAF table. If the script uses hard-coded paths, update the input and output paths near the top of the script before running.
 
-This script likely computes lineage-level summaries used by the figure scripts. Depending on implementation, it may:
-	•	derive lineage metrics,
-	•	summarize transitions or branch membership,
-	•	calculate clone dominance or diversity-related measures,
-	•	export reusable tables for phase-plane or combined plots.
+Expected Figure 5 outputs include:
 
-kmt2a_phase_plane_lineage_plots.py
+```text
+Figure5_case_level_model_comparison_AICc.png
+Figure5_case_level_model_comparison_AICc.pdf
+iScience_case_level_AICc_model_comparison.xlsx
+iScience_case_level_AICc_model_comparison.csv
+iScience_case_level_model_fits_long.csv
+iScience_case_level_VAF_timeseries_collapsed.csv
+```
 
-This script likely visualizes the state space of lineage progression. Typical operations may include:
-	•	plotting coordinates in an inferred phase plane,
-	•	overlaying lineage identity or branch assignments,
-	•	annotating directional progression or equilibrium structure,
-	•	producing patient-specific or cohort-level trajectory plots.
+## Example Python loading commands
 
-Data files and their roles
+Load the supplementary workbook:
 
-kmt2a_clinical_data.xlsx
-
-Primary processed cohort table. This is the main clinical input for the leukemia analysis workflow.
-
-Typical contents may include:
-	•	patient identifiers,
-	•	disease phase or timepoint variables,
-	•	longitudinal measurements,
-	•	clinical annotations used in the model-based analyses.
-
-P15_OU_clone_fractions.csv
-
-Processed clone-fraction table for the P15 case.
-
-Typical uses:
-	•	clone abundance summaries,
-	•	branch-aware fraction analysis,
-	•	patient-specific visualization in Figures 3 and 4.
-
-P15_OU_mutation_VAFs.csv
-
-Processed mutation-VAF table for the P15 case.
-
-Typical uses:
-	•	mutation-level trajectory summaries,
-	•	phase-plane analysis,
-	•	clone/VAF integration in patient-specific figures.
-
-lineage_metrics_summary.csv
-
-Derived lineage-summary table, likely used as an intermediate analytical product.
-
-Typical uses:
-	•	branch/lineage metric reporting,
-	•	linkage between lineage analysis and plotting scripts,
-	•	supporting figure annotations.
-
-Supplementary_Tables.xlsx
-
-Supplementary manuscript tables corresponding to the preprint or journal-facing submission package.
-
-Typical workflow
-
-A typical order of use from the repository root may be:
-
-python kmt2a_lineage_analysis.py
-python kmt2a_phase_plane_lineage_plots.py
-
-python Figure1_OU_vs_Brownian_vs_Markov.py
-python Figure2_kmt2a_clinical_data_analysis_by_ou_branching.py
-python Figure3_Combined_P15.py
-python Figure4_P15_OU_Branching_Combined.py
-
-A practical interpretation of this workflow is:
-	1.	compute lineage-level summaries,
-	2.	generate phase-plane lineage plots,
-	3.	generate the conceptual comparison figure,
-	4.	generate the cohort-level clinical OU-Branching figure,
-	5.	generate the P15 combined figure,
-	6.	generate the final P15 OU-Branching synthesis figure.
-
-Typical Python loading examples
-
-Load the processed clinical dataset
-
+```python
 import pandas as pd
 
-clinical = pd.read_excel("kmt2a_clinical_data.xlsx")
+supp = pd.ExcelFile("data/processed/Supplementary_Tables.xlsx")
+print(supp.sheet_names)
+```
+
+Load the case-level model-comparison table:
+
+```python
+import pandas as pd
+
+s8 = pd.read_excel(
+    "data/processed/Supplementary_Tables.xlsx",
+    sheet_name="Case_Level_Model_Comparison",
+    header=2,
+)
+print(s8[["Patient", "Disease", "Group", "best_model", "best_AICc", "best_weight"]].head())
+```
+
+Load the processed clinical dataset:
+
+```python
+import pandas as pd
+
+clinical = pd.read_excel("data/processed/kmt2a_clinical_data.xlsx")
 print(clinical.head())
+```
 
-Load P15 clone fractions
+Load P15 clone fractions:
 
+```python
 import pandas as pd
 
-clone_frac = pd.read_csv("P15_OU_clone_fractions.csv")
+clone_frac = pd.read_csv("data/processed/P15_OU_clone_fractions.csv")
 print(clone_frac.head())
+```
 
-Load P15 mutation VAF summaries
+Load P15 mutation VAF summaries:
 
+```python
 import pandas as pd
 
-vafs = pd.read_csv("P15_OU_mutation_VAFs.csv")
+vafs = pd.read_csv("data/processed/P15_OU_mutation_VAFs.csv")
 print(vafs.head())
+```
 
-Load lineage summary metrics
+Load lineage summary metrics:
 
+```python
 import pandas as pd
 
-lineage_metrics = pd.read_csv("lineage_metrics_summary.csv")
+lineage_metrics = pd.read_csv("data/processed/lineage_metrics_summary.csv")
 print(lineage_metrics.head())
+```
 
-Software environment
+## Software environment
 
-The repository is intended to run in Python 3 with the standard scientific Python stack. A typical environment will require:
-	•	numpy
-	•	pandas
-	•	matplotlib
-	•	scipy
-	•	openpyxl
+The repository is intended to run in Python 3.11 with the standard scientific Python stack.
 
-Depending on the scripts, you may also need:
-	•	seaborn
-	•	scikit-learn
+Required packages:
+
+```text
+numpy
+pandas
+matplotlib
+scipy
+openpyxl
+```
+
+Optional packages depending on local plotting or exploratory scripts:
+
+```text
+seaborn
+scikit-learn
+```
 
 A simple installation example is:
 
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
 pip install numpy pandas matplotlib scipy openpyxl seaborn scikit-learn
+```
 
-A conda-based setup is also reasonable:
+A conda-based setup is:
 
+```bash
 conda create -n kmt2a-ou python=3.11
 conda activate kmt2a-ou
 pip install numpy pandas matplotlib scipy openpyxl seaborn scikit-learn
+```
 
-Reproducibility notes
+## Suggested `requirements.txt`
 
-This repository is designed for manuscript reproducibility using processed and analysis-ready inputs.
-
-Important notes:
-	•	The repository is manuscript-specific.
-	•	Figure scripts may assume that upstream processed tables already exist.
-	•	Some filenames and figure panel contents may reflect manuscript-version-specific organization.
-	•	Results may vary slightly if plotting defaults, software versions, or random seeds differ.
-
-For a strong archival submission, it is recommended to preserve:
-	•	the exact repository commit used for the manuscript,
-	•	the precise processed input tables used in the analyses,
-	•	the full supplementary tables workbook,
-	•	an environment specification such as requirements.txt or environment.yml.
-
-Recommended additions
-
-For a cleaner public release, you may want to add:
-	•	requirements.txt
-	•	environment.yml
-	•	LICENSE
-	•	.gitignore
-	•	a results/ folder for exported figure files
-	•	a short note describing expected outputs for each figure script
-
-Suggested requirements.txt
-
+```text
 numpy
 pandas
 matplotlib
@@ -323,27 +296,52 @@ scipy
 openpyxl
 seaborn
 scikit-learn
+```
 
-Example output mapping
+## Reproducibility notes
 
-A useful addition for readers is to indicate which script generates which manuscript figure:
-	•	Figure1_OU_vs_Brownian_vs_Markov.py → Main Figure 1
-	•	Figure2_kmt2a_clinical_data_analysis_by_ou_branching.py → Main Figure 2
-	•	Figure3_Combined_P15.py → Main Figure 3
-	•	Figure4_P15_OU_Branching_Combined.py → Main Figure 4
-	•	Supplementary_Tables.xlsx → Supplementary tables package
+This repository is designed for manuscript reproducibility using processed and analysis-ready inputs.
 
-Citation
+Important notes:
 
-If you use this repository, please cite the associated preprint.
+- The repository is manuscript-specific.
+- Figure scripts may assume that upstream processed tables already exist.
+- Some filenames and figure panel contents may reflect manuscript-version-specific organization.
+- Results may vary slightly if plotting defaults, software versions, or random seeds differ.
+- The case-level model-comparison workflow uses longitudinal targeted-sequencing VAF trajectories as tumor-burden proxies; these data do not fully identify latent single-lineage birth, death, and extinction events.
+- The OU--Branching jump-diffusion model is therefore used as a tractable proxy for abrupt lineage-like reconfiguration in VAF time series.
 
-Seung-Hwan Kim. Computational and cohort-level extension of hybrid OU-Branching modeling in pediatric KMT2A-rearranged leukemia. bioRxiv preprint, Version 1, November 2025. doi: https://doi.org/10.1101/2025.11.07.686044
+For archival reproducibility, preserve:
 
-Contact
+- the exact repository commit used for manuscript submission;
+- the precise processed input tables;
+- `Supplementary_Tables.xlsx` with sheets S1--S8;
+- the generated Figure 5 outputs and case-level model-comparison tables;
+- `requirements.txt` or `environment.yml`;
+- the Zenodo DOI associated with the release.
 
-Author: Seung-Hwan Kim
+## Recommended public-release additions
 
-DOI
-10.5281/zenodo.17555292
+For a cleaner public release, include:
 
-[![DOI](https://zenodo.org/badge/494576446.svg)](https://doi.org/10.5281/zenodo.17555291)
+- `requirements.txt`
+- `environment.yml`
+- `LICENSE`
+- `.gitignore`
+- `data/raw/` and `data/processed/` folders
+- `results/figures/` and `results/tables/` folders
+- a frozen Zenodo release corresponding to the exact manuscript revision
+
+## Citation
+
+If you use this repository, please cite the associated manuscript and archived repository release.
+
+Seung-Hwan Kim. **Modeling constrained tumor evolution through hybrid Ornstein--Uhlenbeck and branching dynamics.** iScience revised manuscript, ISCIENCE-D-25-20135.
+
+Repository archive DOI: [https://doi.org/10.5281/zenodo.17555292](https://doi.org/10.5281/zenodo.17555292)
+
+## Contact
+
+Seung-Hwan Kim, Ph.D.  
+Department of Biology, Fisher College  
+Email: seung-hwan.kim@fisher.edu
