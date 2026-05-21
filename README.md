@@ -62,14 +62,14 @@ repo_root/
       P15_OU_clone_fractions.csv
       P15_OU_mutation_VAFs.csv
       lineage_metrics_summary.csv
-      Supplementary_Tables.xlsx
+      Supplementary_Data.xlsx
 
   scripts/
     Figure1_OU_vs_Brownian_vs_Markov.py
     Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py
     Figure3_Combined_P15.py
     Figure4_P15_OU_Branching_Combined.py
-    run_case_level_aicc_model_comparison.py
+    run_case_level_aicc_model_comparison_longform.py
     kmt2a_lineage_analysis.py
     kmt2a_phase_plane_lineage_plots.py
 
@@ -102,7 +102,7 @@ The exact repository organization may differ slightly depending on manuscript-ve
 | `Figure2_kmt2a_clinical_data_analysis_by_ou_branching_model.py` | Cohort-level relapse and disease-subtype summaries | Figure 2 |
 | `Figure3_Combined_P15.py` | P15 trait, clone-count, phase-plane, and lineage panels | Figure 3 |
 | `Figure4_P15_OU_Branching_Combined.py` | P15 clone-fraction and VAF-like trajectory synthesis | Figure 4 |
-| `run_case_level_aicc_model_comparison.py` | Case-level AICc workbook/table and delta-AICc heatmap | Figure 5; Supplementary Table S8 |
+| `run_case_level_aicc_model_comparison_longform.py` | Case-level AICc workbook/table and delta-AICc heatmap | Figure 5; Supplementary Table S8 |
 | `kmt2a_lineage_analysis.py` | Lineage-derived metrics | Supplementary lineage metrics |
 | `kmt2a_phase_plane_lineage_plots.py` | Lineage-aware phase-plane plots | Supporting analyses |
 
@@ -172,7 +172,7 @@ python scripts/Figure3_Combined_P15.py
 python scripts/Figure4_P15_OU_Branching_Combined.py
 
 # Case-level model comparison for Figure 5 and Supplementary Table S8
-python scripts/run_case_level_aicc_model_comparison.py
+python scripts/run_case_level_aicc_model_comparison_longform.py
 ```
 
 The Figure 5 workflow expects access to the Ahlgren et al. supplementary workbook or an equivalent processed VAF table. If the script uses hard-coded paths, update the input and output paths near the top of the script before running.
@@ -195,7 +195,7 @@ Load the supplementary workbook:
 ```python
 import pandas as pd
 
-supp = pd.ExcelFile("data/processed/Supplementary_Tables.xlsx")
+supp = pd.ExcelFile("data/processed/Supplementary_Data.xlsx")
 print(supp.sheet_names)
 ```
 
@@ -205,7 +205,7 @@ Load the case-level model-comparison table:
 import pandas as pd
 
 s8 = pd.read_excel(
-    "data/processed/Supplementary_Tables.xlsx",
+    "data/processed/Supplementary_Data.xlsx",
     sheet_name="Case_Level_Model_Comparison",
     header=2,
 )
